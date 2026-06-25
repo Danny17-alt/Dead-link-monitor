@@ -16,6 +16,13 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
+const planLimits = {
+  'free': 1,
+  'starter': 5,
+  'professional': 20,
+  'agency': 999
+};
+
 // Add a site
 router.post('/', authenticateToken, (req, res) => {
   try {
@@ -23,6 +30,18 @@ router.post('/', authenticateToken, (req, res) => {
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
+    }
+
+    // Check plan limits
+    const users = query(`SELECT plan FROM app_users WHERE id = '${req.user.id}'`);
+    const userPlan = users[0]?.plan || 'free';
+    const limit = planLimits[userPlan] || 1;
+
+    const existingSites = query(`SELECT COUNT(*) as count FROM sites WHERE user_id = '${req.user.id}'`);
+    if (existingSites[0].count >= limit) {
+      return res.status(403).json({ 
+        error: `Plan limit reached. Your ${userPlan} plan allows up to ${limit} site(s). Please upgrade to add more.` 
+      });
     }
 
     const id = uuidv4();

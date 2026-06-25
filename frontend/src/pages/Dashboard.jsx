@@ -7,35 +7,20 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [usingMock, setUsingMock] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
+        setRefreshError('');
         const data = await api.get('/dashboard/stats');
         setStats(data);
         setError('');
-        setUsingMock(false);
       } catch (err) {
-        console.warn('Backend API not fully live yet. Falling back to mock data for demonstration.', err);
-        // Fallback to rich, professional mock data
-        setUsingMock(true);
-        setStats({
-          healthScore: 94.5,
-          activeSitesCount: 3,
-          totalScansCount: 42,
-          totalIssuesCount: 2,
-          recentScans: [
-            { id: '1', site_name: 'My E-Commerce Store', url: 'https://myshop.com', completed_at: new Date(Date.now() - 3600000).toISOString(), health_score: 100, broken_links: 0, broken_forms: 0, uptime_ok: 1, ssl_valid: 1 },
-            { id: '2', site_name: 'Company Blog', url: 'https://blog.mycompany.com', completed_at: new Date(Date.now() - 7200000).toISOString(), health_score: 83.5, broken_links: 3, broken_forms: 0, uptime_ok: 1, ssl_valid: 1 },
-            { id: '3', site_name: 'SaaS App Landing', url: 'https://getsaas.io', completed_at: new Date(Date.now() - 10800000).toISOString(), health_score: 100, broken_links: 0, broken_forms: 0, uptime_ok: 1, ssl_valid: 1 }
-          ],
-          unresolvedIssues: [
-            { id: 'i1', site_name: 'Company Blog', type: 'broken_link', url: 'https://blog.mycompany.com/pricing', description: 'Link returns 404 Not Found (referenced on /about)', created_at: new Date(Date.now() - 7200000).toISOString() },
-            { id: 'i2', site_name: 'Company Blog', type: 'broken_link', url: 'https://blog.mycompany.com/contact-form-submit', description: 'Form endpoint failed to respond within 5s', created_at: new Date(Date.now() - 7200000).toISOString() }
-          ]
-        });
+        // On API error, keep current stats state and show a warning banner
+        console.warn('Failed to refresh dashboard stats. Keeping existing data.', err);
+        setRefreshError('Could not refresh dashboard data from server. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -62,10 +47,11 @@ export default function Dashboard() {
           <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--dark)' }}>Watchdog Overview</h1>
           <p style={{ color: 'var(--text-muted)' }}>Real-time status of your website health and active scans</p>
         </div>
-        {usingMock && (
-          <span className="health-badge warning" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            ⚠️ Demo Mode (Backend Offline)
-          </span>
+        {refreshError && (
+          <div className="notification-banner warning" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>⚠️</span>
+            <span>{refreshError}</span>
+          </div>
         )}
       </div>
 

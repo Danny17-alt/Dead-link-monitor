@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Sites from './pages/Sites';
 import SiteDetails from './pages/SiteDetails';
 import Alerts from './pages/Alerts';
+import Pricing from './pages/Pricing';
 
 // Protected Route Wrapper
 function ProtectedLayout() {
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/sites" element={<Sites />} />
         <Route path="/sites/:id" element={<SiteDetails />} />
         <Route path="/alerts" element={<Alerts />} />
+        <Route path="/pricing" element={<Pricing />} />
       </Route>
 
       {/* Catch-all Redirect */}

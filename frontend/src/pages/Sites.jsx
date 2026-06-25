@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import SiteCard from '../components/SiteCard';
 
@@ -7,7 +8,7 @@ export default function Sites() {
   const [scans, setScans] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [usingMock, setUsingMock] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -19,6 +20,7 @@ export default function Sites() {
   const fetchSitesAndScans = async () => {
     try {
       setLoading(true);
+      setRefreshError('');
       const sitesData = await api.get('/sites');
       setSites(sitesData);
       
@@ -36,24 +38,10 @@ export default function Sites() {
       }
       setScans(scansMap);
       setError('');
-      setUsingMock(false);
     } catch (err) {
-      console.warn('Backend API not fully live yet. Falling back to mock data for demonstration.', err);
-      setUsingMock(true);
-      
-      const mockSites = [
-        { id: '1', name: 'My E-Commerce Store', url: 'https://myshop.com', last_scan_at: new Date(Date.now() - 3600000).toISOString(), is_active: 1 },
-        { id: '2', name: 'Company Blog', url: 'https://blog.mycompany.com', last_scan_at: new Date(Date.now() - 7200000).toISOString(), is_active: 1 },
-        { id: '3', name: 'SaaS App Landing', url: 'https://getsaas.io', last_scan_at: new Date(Date.now() - 10800000).toISOString(), is_active: 1 }
-      ];
-      setSites(mockSites);
-
-      const mockScans = {
-        '1': { site_id: '1', health_score: 100, broken_links: 0, broken_forms: 0, ssl_valid: 1, uptime_ok: 1 },
-        '2': { site_id: '2', health_score: 83.5, broken_links: 3, broken_forms: 0, ssl_valid: 1, uptime_ok: 1 },
-        '3': { site_id: '3', health_score: 100, broken_links: 0, broken_forms: 0, ssl_valid: 1, uptime_ok: 1 }
-      };
-      setScans(mockScans);
+      // On API error, keep current state and show a warning banner
+      console.warn('Failed to refresh sites from API. Keeping existing data.', err);
+      setRefreshError('Could not refresh sites from server. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -82,28 +70,26 @@ export default function Sites() {
     setModalLoading(true);
 
     try {
-      if (usingMock) {
-        // If in mock mode, simulate adding
-        const mockNewSite = {
-          id: String(sites.length + 1),
-          name: newName,
-          url: newUrl,
-          last_scan_at: null,
-          is_active: 1
-        };
-        setSites([...sites, mockNewSite]);
-        setShowModal(false);
-        setNewName('');
-        setNewUrl('');
-      } else {
-        await api.post('/sites', { name: newName, url: newUrl });
-        setShowModal(false);
-        setNewName('');
-        setNewUrl('');
-        fetchSitesAndScans(); // Reload
-      }
+      await api.post('/sites', { name: newName, url: newUrl });
+      setShowModal(false);
+      setNewName('');
+      setNewUrl('');
+      fetchSitesAndScans(); // Reload
     } catch (err) {
-      setModalError(err.message || 'Failed to add website. Please try again.');
+      // Check if error is plan-related
+      const msg = (err.message || '').toLowerCase();
+      if (msg.includes('plan') || msg.includes('limit') || msg.includes('upgrade') || msg.includes('max sites') || msg.includes('subscription')) {
+        setModalError(
+          <>
+            <span>{err.message || 'You\'ve reached the limit for your current plan.'}</span>
+            <Link to="/pricing" className="btn btn-primary" style={{ marginLeft: '0.75rem', padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'inline-flex' }}>
+              Upgrade Plan
+            </Link>
+          </>
+        );
+      } else {
+        setModalError(err.message || 'Failed to add website. Please try again.');
+      }
     } finally {
       setModalLoading(false);
     }
@@ -115,12 +101,8 @@ export default function Sites() {
     }
 
     try {
-      if (usingMock) {
-        setSites(sites.filter(site => site.id !== id));
-      } else {
-        await api.delete(`/sites/${id}`);
-        fetchSitesAndScans();
-      }
+      await api.delete(`/sites/${id}`);
+      fetchSitesAndScans();
     } catch (err) {
       alert(err.message || 'Failed to delete website.');
     }
@@ -137,6 +119,13 @@ export default function Sites() {
           + Add Website
         </button>
       </div>
+
+      {refreshError && (
+        <div className="notification-banner warning" style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span>⚠️</span>
+          <span>{refreshError}</span>
+        </div>
+      )}
 
       {loading ? (
         <div className="spinner-container">

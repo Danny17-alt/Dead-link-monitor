@@ -6,6 +6,7 @@ const siteRoutes = require('./routes/sites');
 const scanRoutes = require('./routes/scans');
 const alertRoutes = require('./routes/alerts');
 const dashboardRoutes = require('./routes/dashboard');
+const subscriptionRoutes = require('./routes/subscriptions');
 const { startScheduler } = require('./utils/scheduler');
 
 const app = express();
@@ -21,6 +22,7 @@ app.use('/api/sites', siteRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api', subscriptionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

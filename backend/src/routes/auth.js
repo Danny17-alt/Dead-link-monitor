@@ -26,7 +26,11 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const id = uuidv4();
 
-    query(`INSERT INTO app_users (id, email, password_hash, name) VALUES ('${id}', '${escapedEmail}', '${passwordHash}', '${escape(name || '')}')`);
+    query(`INSERT INTO app_users (id, email, password_hash, name, plan) VALUES ('${id}', '${escapedEmail}', '${passwordHash}', '${escape(name || '')}', 'free')`);
+
+    // Initialize subscription record
+    const subId = uuidv4();
+    query(`INSERT INTO subscriptions (id, user_id, plan, status) VALUES ('${subId}', '${id}', 'free', 'active')`);
 
     res.status(201).json({ message: 'User registered successfully', userId: id });
   } catch (error) {
@@ -57,7 +61,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, plan: user.plan || 'free' }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
 
     res.json({
       token,
