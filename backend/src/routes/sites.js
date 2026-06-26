@@ -70,10 +70,10 @@ router.delete('/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Site not found or access denied' });
     }
 
+    query(`DELETE FROM issues WHERE site_id = '${id}'`);
+    query(`DELETE FROM alerts WHERE site_id = '${id}'`);
+    query(`DELETE FROM scans WHERE site_id = '${id}'`);
     query(`DELETE FROM sites WHERE id = '${id}'`);
-    
-    // Also delete related scans, issues, alerts? 
-    // For now, keep it simple. Usually DB should have ON DELETE CASCADE if set up.
     
     res.json({ message: 'Site deleted successfully' });
   } catch (error) {
