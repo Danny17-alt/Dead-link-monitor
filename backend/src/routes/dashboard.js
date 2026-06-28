@@ -10,16 +10,22 @@ router.get('/stats', authenticateToken, (req, res) => {
     const siteIds = sites.map(s => `'${s.id}'`).join(',');
 
     let stats = {
-      totalSites: sites.length,
-      activeIssues: 0,
+      activeSitesCount: sites.length,
+      totalScansCount: 0,
+      totalIssuesCount: 0,
       healthScore: 100,
-      recentScans: []
+      recentScans: [],
+      unresolvedIssues: []
     };
 
     if (sites.length > 0) {
       // Count unresolved issues
       const issues = query(`SELECT COUNT(*) as count FROM issues WHERE site_id IN (${siteIds}) AND is_resolved = 0`);
-      stats.activeIssues = issues[0].count;
+      stats.totalIssuesCount = issues[0].count;
+
+      // Total scans count
+      const scansCount = query(`SELECT COUNT(*) as count FROM scans WHERE site_id IN (${siteIds})`);
+      stats.totalScansCount = scansCount[0].count;
 
       // Average health score of last scans
       const lastScans = query(`
@@ -44,6 +50,16 @@ router.get('/stats', authenticateToken, (req, res) => {
         WHERE st.user_id = '${req.user.id}'
         ORDER BY s.created_at DESC
         LIMIT 5
+      `);
+
+      // Get unresolved issues list
+      stats.unresolvedIssues = query(`
+        SELECT i.*, s.name as site_name, s.url as site_url
+        FROM issues i
+        JOIN sites s ON i.site_id = s.id
+        WHERE i.site_id IN (${siteIds}) AND i.is_resolved = 0
+        ORDER BY i.created_at DESC
+        LIMIT 10
       `);
     }
 
